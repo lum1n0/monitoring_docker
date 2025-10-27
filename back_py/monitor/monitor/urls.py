@@ -7,4 +7,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/login/', obtain_auth_token),  # возвращает {"token": "..."}
     path('api/', include('main.urls')),
+    path('', include('django_prometheus.urls')),
 ]

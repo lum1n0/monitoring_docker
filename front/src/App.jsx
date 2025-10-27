@@ -8,6 +8,7 @@ import ContainersPage from './pages/ContainersPage';
 import DockerContainerDetails from './pages/DockerContainerDetails';
 import PodsPage from './pages/PodsPage';
 import PodDetails from './pages/PodDetails';
+import DockerDashboard from './pages/DockerDashboard';
 import EventsPage from './pages/EventsPage';
 import Login from './pages/Login';
 
@@ -45,7 +46,7 @@ function App() {
               </RequireAuth>
             }
           >
-            <Route index element={<Dashboard />} />
+            <Route index element={<DockerDashboard />} />
             <Route path="containers" element={<ContainersPage />} />
             <Route path="containers/:id" element={<DockerContainerDetails />} />
             <Route path="pods" element={<PodsPage />} />

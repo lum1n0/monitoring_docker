@@ -1,18 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchClusters, fetchClusterStats, fetchClusterHealth, syncKubernetesData } from '../api/services';
 import { Activity, Database, Server, AlertTriangle, RefreshCw } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 function Dashboard() {
     const [selectedCluster, setSelectedCluster] = useState(null);
     const [syncing, setSyncing] = useState(false);
+    const [metrics, setMetrics] = useState({
+        cpu: [],
+        memory: [],
+        network: [],
+        pods: []
+    });
+    const ws = useRef(null);
 
     const { data: clustersResponse, isLoading: clustersLoading } = useQuery({
         queryKey: ['clusters'],
         queryFn: fetchClusters,
     });
 
-    // Извлекаем массив кластеров из ответа DRF
     const clusters = clustersResponse?.results || clustersResponse || [];
 
     const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery({
@@ -26,6 +33,51 @@ function Dashboard() {
         queryFn: () => fetchClusterHealth(selectedCluster),
         enabled: !!selectedCluster,
     });
+
+    // WebSocket подключение
+    useEffect(() => {
+        if (!selectedCluster) return;
+
+        const token = localStorage.getItem('token');
+        const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const wsUrl = `${wsScheme}://${window.location.host}/ws/metrics/?token=${token}&cluster_id=${selectedCluster}`;
+
+        ws.current = new WebSocket(wsUrl);
+
+        ws.current.onmessage = (event) => {
+            try {
+                const payload = JSON.parse(event.data);
+                console.log('WebSocket data received:', payload);
+                
+                setMetrics(prev => ({
+                    cpu: [...prev.cpu.slice(-59), ...(payload.cpu?.data || [])].slice(-60),
+                    memory: [...prev.memory.slice(-59), ...(payload.memory?.data || [])].slice(-60),
+                    network: [...prev.network.slice(-59), ...(payload.network?.data || [])].slice(-60),
+                    pods: [...prev.pods.slice(-59), ...(payload.pods?.data || [])].slice(-60)
+                }));
+            } catch (error) {
+                console.error('Error parsing WebSocket message:', error);
+            }
+        };
+
+        ws.current.onopen = () => {
+            console.log('WebSocket connected');
+        };
+
+        ws.current.onclose = () => {
+            console.log('WebSocket disconnected');
+        };
+
+        ws.current.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        return () => {
+            if (ws.current) {
+                ws.current.close();
+            }
+        };
+    }, [selectedCluster]);
 
     useEffect(() => {
         if (clusters.length > 0 && !selectedCluster) {
@@ -53,17 +105,17 @@ function Dashboard() {
         return <div className="loading">Загрузка кластеров...</div>;
     }
 
-    if (clusters.length === 0) {
-        return (
-            <div className="empty-state">
-                <h2>Кластеры не найдены</h2>
-                <p>Добавьте кластер через админ-панель Django</p>
-                <a href="http://backend:8000/admin" target="_blank" rel="noopener noreferrer">
-                    Открыть админ-панель
-                </a>
-            </div>
-        );
-    }
+    // if (clusters.length === 0) {
+    //     return (
+    //         <div className="empty-state">
+    //             <h2>Кластеры не найдены</h2>
+    //             <p>Добавьте кластер через админ-панель Django</p>
+    //             <a href="http://backend:8000/admin" target="_blank" rel="noopener noreferrer">
+    //                 Открыть админ-панель
+    //             </a>
+    //         </div>
+    //     );
+    // }
 
     return (
         <div className="dashboard">
@@ -120,6 +172,135 @@ function Dashboard() {
                             value={health?.recent_issues || 0}
                             color="orange"
                         />
+                    </div>
+
+                    {/* Графики метрик в реальном времени */}
+                    <div className="metrics-charts">
+                        <h2>Метрики в реальном времени</h2>
+                        
+                        <div className="chart-grid">
+                            {/* График использования CPU */}
+                            <div className="chart-card">
+                                <h3>Использование CPU (%)</h3>
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <AreaChart data={metrics.cpu}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis 
+                                            dataKey="timestamp" 
+                                            tickFormatter={(value) => new Date(value).toLocaleTimeString()}
+                                        />
+                                        <YAxis domain={[0, 100]} />
+                                        <Tooltip 
+                                            labelFormatter={(value) => `Время: ${new Date(value).toLocaleTimeString()}`}
+                                            formatter={(value) => [`${value}%`, 'CPU']}
+                                        />
+                                        <Legend />
+                                        <Area 
+                                            type="monotone" 
+                                            dataKey="value" 
+                                            stroke="#8884d8" 
+                                            fill="#8884d8" 
+                                            fillOpacity={0.3}
+                                            name="CPU Usage"
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* График использования памяти */}
+                            <div className="chart-card">
+                                <h3>Использование памяти (MB)</h3>
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <AreaChart data={metrics.memory}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis 
+                                            dataKey="timestamp" 
+                                            tickFormatter={(value) => new Date(value).toLocaleTimeString()}
+                                        />
+                                        <YAxis />
+                                        <Tooltip 
+                                            labelFormatter={(value) => `Время: ${new Date(value).toLocaleTimeString()}`}
+                                            formatter={(value) => [`${value} MB`, 'Memory']}
+                                        />
+                                        <Legend />
+                                        <Area 
+                                            type="monotone" 
+                                            dataKey="value" 
+                                            stroke="#82ca9d" 
+                                            fill="#82ca9d" 
+                                            fillOpacity={0.3}
+                                            name="Memory Usage"
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* График сетевой активности */}
+                            <div className="chart-card">
+                                <h3>Сетевая активность (KB/s)</h3>
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <LineChart data={metrics.network}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis 
+                                            dataKey="timestamp" 
+                                            tickFormatter={(value) => new Date(value).toLocaleTimeString()}
+                                        />
+                                        <YAxis />
+                                        <Tooltip 
+                                            labelFormatter={(value) => `Время: ${new Date(value).toLocaleTimeString()}`}
+                                        />
+                                        <Legend />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="in" 
+                                            stroke="#ff7300" 
+                                            name="Network In"
+                                            strokeWidth={2}
+                                        />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="out" 
+                                            stroke="#387908" 
+                                            name="Network Out"
+                                            strokeWidth={2}
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* График количества подов */}
+                            <div className="chart-card">
+                                <h3>Количество подов</h3>
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <LineChart data={metrics.pods}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis 
+                                            dataKey="timestamp" 
+                                            tickFormatter={(value) => new Date(value).toLocaleTimeString()}
+                                        />
+                                        <YAxis />
+                                        <Tooltip 
+                                            labelFormatter={(value) => `Время: ${new Date(value).toLocaleTimeString()}`}
+                                        />
+                                        <Legend />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="total" 
+                                            stroke="#8884d8" 
+                                            name="Total Pods"
+                                            strokeWidth={2}
+                                        />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="running" 
+                                            stroke="#82ca9d" 
+                                            name="Running Pods"
+                                            strokeWidth={2}
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
                     </div>
 
                     {health && (

@@ -1,4 +1,5 @@
-version: '3.8'
+# docker-compose.yml
+#version: '3.8'
 
 services:
   db:
@@ -16,26 +17,48 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks: [monitoring]
 
-  backend:
-    build: .
-    command: python manage.py runserver 0.0.0.0:8000
+  redis:
+    image: redis:7-alpine
+    networks: [monitoring]
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    privileged: true
     volumes:
-      - ./monitor:/app
-      - ~/.kube:/root/.kube:ro
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - ${DOCKER_ROOT_DIR}:/var/lib/docker:ro
+    networks: [monitoring]
+
+  prometheus:
+    image: prom/prometheus:latest
+    command: --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks: [monitoring]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
-      - "8000:8000"
+    - "9090:9090"  # Пробрось порт
+
+  grafana:
+    image: grafana/grafana:latest
     environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5332
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - DEBUG=${DEBUG}
-    depends_on:
-      db:
-        condition: service_healthy
+      - GF_SERVER_HTTP_PORT=5050
+    ports:
+      - "5050:5050"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana.ini:/etc/grafana/grafana.ini:ro  # Новый volume для config
+    networks: [monitoring]
+
+networks:
+  monitoring: {}
 
 volumes:
   postgres_data:
+  grafana_data:

@@ -1,4 +1,3 @@
-# monitor/settings.py (полный файл)
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -19,6 +18,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'django_prometheus',
+    'channels',
+
     # Third party apps
     'rest_framework',
     'rest_framework.authtoken',
@@ -29,6 +31,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -37,7 +40,19 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
+
+ASGI_APPLICATION = 'monitor.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [os.getenv("REDIS_URL", "redis://redis:6379")]},
+    }
+}
+
+PROMETHEUS_METRIC_NAMESPACE="monitoring"
 
 ROOT_URLCONF = 'monitor.urls'
 
@@ -120,3 +135,38 @@ REST_FRAMEWORK = {
 # Kubernetes Configuration
 K8S_CONFIG_PATH = os.getenv('K8S_CONFIG_PATH', None)
 K8S_IN_CLUSTER = os.getenv('K8S_IN_CLUSTER', 'False') == 'True'
+
+# Разрешаем iframe в dev
+if DEBUG:
+    CHANNEL_LAYERS = {
+        "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
+    }
+    X_FRAME_OPTIONS = 'ALLOW-FROM http://grafana:5050'  
+    
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'main': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
