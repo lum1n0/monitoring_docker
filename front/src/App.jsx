@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import ContainersPage from './pages/ContainersPage';
 import DockerContainerDetails from './pages/DockerContainerDetails';
+import ContainerErrors from './pages/ContainerErrors'
 import PodsPage from './pages/PodsPage';
 import PodDetails from './pages/PodDetails';
 import DockerDashboard from './pages/DockerDashboard';
@@ -48,6 +49,7 @@ function App() {
           >
             <Route index element={<DockerDashboard />} />
             <Route path="containers" element={<ContainersPage />} />
+             <Route path="error" element={<ContainerErrors />} />
             <Route path="containers/:id" element={<DockerContainerDetails />} />
             <Route path="pods" element={<PodsPage />} />
             <Route path="pods/:id" element={<PodDetails />} />

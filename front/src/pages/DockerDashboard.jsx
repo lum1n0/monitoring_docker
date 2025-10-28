@@ -5,17 +5,17 @@ function DockerDashboard() {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const mountedRef = useRef(true);
-  
+
   const [points, setPoints] = useState({ cpu: [], memory: [], netrx: [], nettx: [] });
   const [selectedContainer, setSelectedContainer] = useState('');
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState(null);
   const [hideMonitoring, setHideMonitoring] = useState(true);
 
-  const monitoringContainers = ['back_py-cadvisor', 'back_py-prometheus', 'back_py-grafana', 'back_py-db', 'back_py-redis', 'k8s_monitor_backend', 'k8s_monitor_db', 'k8s_monitor_frontend', 'k8s_monitor-cadvisor', 'k8s_monitor-prometheus', 'k8s_monitor-grafana', 'k8s_monitor-db', 'k8s_monitor-redis'];
+const monitoringContainers = ['back_py-cadvisor', 'back_py-prometheus', 'back_py-grafana', 'back_py-db', 'back_py-redis', 'k8s_monitor_backend', 'k8s_monitor_db', 'k8s_monitor_frontend', 'k8s_monitor-cadvisor', 'k8s_monitor-prometheus', 'k8s_monitor-grafana', 'k8s_monitor-db', 'k8s_monitor-redis'];
   const connectWebSocket = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN || 
-        wsRef.current?.readyState === WebSocket.CONNECTING) {
+    if (wsRef.current?.readyState === WebSocket.OPEN ||
+      wsRef.current?.readyState === WebSocket.CONNECTING) {
       console.log('WebSocket уже подключен или подключается');
       return;
     }
@@ -32,11 +32,11 @@ function DockerDashboard() {
       period: '5',
       ...(selectedContainer ? { container: selectedContainer } : {}),
     });
-    
+
     const base = import.meta.env.DEV
       ? `${wsScheme}://localhost:8000`
       : `${wsScheme}://${window.location.host}`;
-    
+
     const wsUrl = `${base}/ws/docker/metrics/?${q.toString()}`;
 
     console.log('Подключение к WebSocket:', wsUrl);
@@ -54,21 +54,21 @@ function DockerDashboard() {
 
       ws.onmessage = (ev) => {
         if (!mountedRef.current) return;
-        
+
         try {
           const payload = JSON.parse(ev.data);
           console.log('Получены данные:', payload);
-          
+
           if (payload.error) {
             setError(payload.error);
             return;
           }
 
           const ts = payload.ts;
-          
+
           setPoints((prev) => {
             const maxPoints = 60;
-            
+
             return {
               cpu: [...prev.cpu, { ts, data: payload.cpu?.data || [] }].slice(-maxPoints),
               memory: [...prev.memory, { ts, data: payload.memory?.data || [] }].slice(-maxPoints),
@@ -92,7 +92,7 @@ function DockerDashboard() {
         if (!mountedRef.current) return;
         console.log('WebSocket закрыт:', event.code, event.reason);
         setConnected(false);
-        
+
         if (mountedRef.current) {
           reconnectTimeoutRef.current = setTimeout(() => {
             if (mountedRef.current) {
@@ -111,7 +111,7 @@ function DockerDashboard() {
   useEffect(() => {
     mountedRef.current = true;
     setPoints({ cpu: [], memory: [], netrx: [], nettx: [] });
-    
+
     const timer = setTimeout(() => {
       if (mountedRef.current) {
         connectWebSocket();
@@ -121,11 +121,11 @@ function DockerDashboard() {
     return () => {
       mountedRef.current = false;
       clearTimeout(timer);
-      
+
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      
+
       if (wsRef.current) {
         console.log('Закрытие WebSocket при размонтировании');
         wsRef.current.close();
@@ -136,9 +136,9 @@ function DockerDashboard() {
 
   const filterMonitoringContainers = useCallback((data) => {
     if (!hideMonitoring) return data;
-    
+
     return data.filter(item => {
-      return !monitoringContainers.some(monContainer => 
+      return !monitoringContainers.some(monContainer =>
         item.name.startsWith(monContainer)
       );
     });
@@ -146,24 +146,24 @@ function DockerDashboard() {
 
   const transformData = useCallback((pointsArray) => {
     const timeSeriesMap = new Map();
-    
+
     pointsArray.forEach(({ ts, data }) => {
       if (!timeSeriesMap.has(ts)) {
         timeSeriesMap.set(ts, { ts });
       }
-      
+
       const point = timeSeriesMap.get(ts);
       const filteredData = filterMonitoringContainers(data || []);
-      
+
       const topContainers = filteredData
         .sort((a, b) => b.value - a.value)
         .slice(0, 5);
-      
+
       topContainers.forEach(({ name, value }) => {
         point[name] = (point[name] || 0) + value;
       });
     });
-    
+
     return Array.from(timeSeriesMap.values()).sort((a, b) => a.ts - b.ts);
   }, [filterMonitoringContainers]);
 
@@ -185,9 +185,9 @@ function DockerDashboard() {
   const CustomTooltip = ({ active, payload, label, formatter }) => {
     if (active && payload && payload.length) {
       return (
-        <div style={{ 
-          backgroundColor: 'rgba(0,0,0,0.9)', 
-          padding: '12px', 
+        <div style={{
+          backgroundColor: 'rgba(0,0,0,0.9)',
+          padding: '12px',
           borderRadius: '8px',
           color: 'white',
           border: '1px solid #444'
@@ -217,7 +217,7 @@ function DockerDashboard() {
     }
 
     const keys = Object.keys(data[0] || {}).filter((k) => k !== 'ts');
-    
+
     if (keys.length === 0) {
       return (
         <div className="chart-card">
@@ -226,20 +226,20 @@ function DockerDashboard() {
         </div>
       );
     }
-    
+
     return (
       <div className="chart-card">
         <h3>{title}</h3>
         <ResponsiveContainer width="100%" height={240}>
           <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-            <XAxis 
-              dataKey="ts" 
+            <XAxis
+              dataKey="ts"
               tickFormatter={(t) => new Date(t).toLocaleTimeString()}
               stroke="#666"
               style={{ fontSize: '11px' }}
             />
-            <YAxis 
+            <YAxis
               tickFormatter={(v) => formatter ? formatter(v) : v.toFixed(2)}
               stroke="#666"
               style={{ fontSize: '11px' }}
@@ -247,12 +247,12 @@ function DockerDashboard() {
             <Tooltip content={<CustomTooltip formatter={formatter} />} />
             <Legend wrapperStyle={{ fontSize: '11px' }} />
             {keys.map((k, i) => (
-              <Area 
-                key={k} 
-                dataKey={k} 
-                stackId="1" 
-                type="monotone" 
-                stroke={colors[i % 5]} 
+              <Area
+                key={k}
+                dataKey={k}
+                stackId="1"
+                type="monotone"
+                stroke={colors[i % 5]}
                 fill={colors[i % 5]}
                 fillOpacity={0.7}
               />
@@ -266,11 +266,11 @@ function DockerDashboard() {
   return (
     <div style={{ padding: 24, maxWidth: '1600px', margin: '0 auto', minHeight: '100vh' }}>
       <h1 style={{ marginBottom: 24 }}>Мониторинг Docker контейнеров</h1>
-      
-      <div style={{ 
-        marginBottom: 24, 
-        padding: 20, 
-        backgroundColor: 'var(--bg-secondary)', 
+
+      <div style={{
+        marginBottom: 24,
+        padding: 20,
+        backgroundColor: 'var(--bg-secondary)',
         borderRadius: 8,
         display: 'flex',
         alignItems: 'center',
@@ -282,9 +282,9 @@ function DockerDashboard() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <label style={{ fontWeight: 'bold' }}>Фильтр по контейнеру:</label>
           <input
-            style={{ 
-              padding: '10px 14px', 
-              borderRadius: 6, 
+            style={{
+              padding: '10px 14px',
+              borderRadius: 6,
               border: '1px solid var(--border-color)',
               backgroundColor: 'var(--bg-primary)',
               color: 'var(--text-primary)',
@@ -294,11 +294,11 @@ function DockerDashboard() {
             value={selectedContainer}
             onChange={(e) => setSelectedContainer(e.target.value)}
           />
-          
-          <label style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 8, 
+
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
             cursor: 'pointer',
             padding: '8px 12px',
             backgroundColor: hideMonitoring ? 'var(--status-success-bg)' : 'var(--bg-primary)',
@@ -310,8 +310,8 @@ function DockerDashboard() {
               type="checkbox"
               checked={hideMonitoring}
               onChange={(e) => setHideMonitoring(e.target.checked)}
-              style={{ 
-                width: '18px', 
+              style={{
+                width: '18px',
                 height: '18px',
                 cursor: 'pointer',
                 accentColor: 'var(--btn-success)'
@@ -322,12 +322,12 @@ function DockerDashboard() {
             </span>
           </label>
         </div>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ 
-            width: 12, 
-            height: 12, 
-            borderRadius: '50%', 
+          <div style={{
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
             backgroundColor: connected ? 'var(--status-success)' : 'var(--btn-danger)',
             boxShadow: connected ? '0 0 8px var(--status-success)' : '0 0 8px var(--btn-danger)'
           }} />
@@ -352,10 +352,10 @@ function DockerDashboard() {
       )}
 
       {error && (
-        <div style={{ 
-          padding: 16, 
-          backgroundColor: 'var(--status-danger-bg)', 
-          border: '1px solid var(--btn-danger)', 
+        <div style={{
+          padding: 16,
+          backgroundColor: 'var(--status-danger-bg)',
+          border: '1px solid var(--btn-danger)',
           borderRadius: 8,
           marginBottom: 24,
           color: 'var(--btn-danger)'

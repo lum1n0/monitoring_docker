@@ -4,10 +4,11 @@ from docker.errors import DockerException, NotFound, APIError
 from typing import Dict, List, Optional
 from datetime import datetime
 import platform
+from .error_parser import parse_logs_and_save_errors  # ВАЖНО: корректный относительный импорт
+
 import os
 
 logger = logging.getLogger(__name__)
-
 
 class DockerService:
     """Универсальный сервис для работы с Docker API на разных платформах"""
@@ -416,6 +417,23 @@ class DockerService:
         except DockerException as e:
             logger.error(f"Error fetching container logs: {e}")
             return f"Error: {str(e)}"
+
+    def get_and_parse_container_logs(self, containerid: str, tail: int = 100, source: str = None):
+        logs = self.get_container_logs(containerid, tail)  # Исправленная опечатка
+        if not logs or logs.startswith('Error'):
+            return logs
+        # Для docker указываем тип 'docker', имя нужно получить из данных контейнера:
+        container_info = self.get_container_details(containerid)  # Исправленная опечатка
+        container_name = container_info.get('name') if container_info else 'unknown'
+        # Парсим и сохраняем ошибки в БД
+        parse_logs_and_save_errors(
+            container_type='docker',
+            container_id=containerid,
+            container_name=container_name,
+            logs=logs,
+            source=source
+        )
+        return logs
 
     def get_images(self) -> List[Dict]:
         """Получить список образов"""

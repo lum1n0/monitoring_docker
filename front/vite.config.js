@@ -8,16 +8,16 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://backend:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'http://backend:8000',
+        target: 'http://localhost:8000',
         ws: true,
         changeOrigin: true,
       },
       '/grafana': {  // Улучшен прокси для Grafana
-        target: 'http://grafana:5050',
+        target: 'http://localhost:5050',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/grafana/, ''),
         configure: (proxy, _options) => {

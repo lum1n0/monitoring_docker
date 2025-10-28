@@ -141,7 +141,7 @@ if DEBUG:
     CHANNEL_LAYERS = {
         "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
     }
-    X_FRAME_OPTIONS = 'ALLOW-FROM http://grafana:5050'  
+    X_FRAME_OPTIONS = 'ALLOW-FROM http://localhost:5050'  
     
 LOGGING = {
     'version': 1,

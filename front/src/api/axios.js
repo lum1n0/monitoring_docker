@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // В production используем относительный путь (nginx проксирует)
 // В dev - прямо на localhost:8000
-const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://backend:8000/api';
+const API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:8000/api';
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,

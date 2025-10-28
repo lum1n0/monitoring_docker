@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import KubernetesCluster, Namespace, Pod, Container, ContainerMetric, Event, DockerHost, DockerContainer, DockerContainerMetric
+from .models import KubernetesCluster, Namespace, Pod, Container, ContainerMetric, Event, DockerHost, DockerContainer, DockerContainerMetric, ContainerError
+
+
+class ContainerErrorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContainerError
+        fields = '__all__'
 
 
 class KubernetesClusterSerializer(serializers.ModelSerializer):

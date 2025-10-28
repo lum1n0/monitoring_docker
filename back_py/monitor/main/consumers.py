@@ -7,7 +7,7 @@ from asgiref.sync import sync_to_async
 
 logger = logging.getLogger(__name__)
 
-PROM_URL = os.getenv("PROMETHEUS_URL", "http://prometheus:9090")
+PROM_URL = os.getenv("PROMETHEUS_URL", "http://localhost:9090")
 
 # ПРАВИЛЬНЫЕ запросы - убираем sum() для получения всех контейнеров
 # Используем фильтр image!="" чтобы исключить системные процессы

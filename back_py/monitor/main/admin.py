@@ -1,8 +1,15 @@
 from django.contrib import admin
 from .models import (
     KubernetesCluster, Namespace, Pod, Container, ContainerMetric, Event,
-    DockerHost, DockerContainer, DockerContainerMetric
+    DockerHost, DockerContainer, DockerContainerMetric, ContainerError
 )
+
+@admin.register(ContainerError)
+class ContainerErrorAdmin(admin.ModelAdmin):
+    list_display = ['timestamp', 'source_type', 'container_name', 'container_id', 'level', 'service_name']
+    list_filter = ['source_type', 'level', 'service_name', 'timestamp']
+    search_fields = ['container_name', 'container_id', 'short_message', 'error_message']
+    date_hierarchy = 'timestamp'
 
 @admin.register(KubernetesCluster)
 class KubernetesClusterAdmin(admin.ModelAdmin):

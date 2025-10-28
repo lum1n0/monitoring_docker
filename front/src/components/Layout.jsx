@@ -15,8 +15,8 @@ function Layout() {
             <nav className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
                 <div className="sidebar-header">
                     <h1>{!collapsed && 'K8s Monitor'}</h1>
-                    <button 
-                        className="toggle-btn" 
+                    <button
+                        className="toggle-btn"
                         onClick={() => setCollapsed(!collapsed)}
                         title={collapsed ? 'Развернуть' : 'Свернуть'}
                     >
@@ -34,6 +34,11 @@ function Layout() {
                         <Link to="/containers" title="Containers">
                             <Container size={20} />
                             {!collapsed && <span>Containers</span>}
+                        </Link>
+                    </li><li className={isActive('/error')}>
+                        <Link to="/error" title="Containers">
+                            <Container size={20} />
+                            {!collapsed && <span>ContaContainerErrorsiners</span>}
                         </Link>
                     </li>
                     <li className={isActive('/pods')}>

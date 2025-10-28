@@ -1,3 +1,4 @@
+
 from django.db import models
 from django.utils import timezone
 
@@ -257,3 +258,38 @@ class DockerContainerMetric(models.Model):
 
     def __str__(self):
         return f"{self.container} - {self.timestamp}"
+
+
+class ContainerError(models.Model):
+    SOURCE_TYPE_CHOICES = [
+        ('docker', 'Docker'),
+        ('k8s', 'Kubernetes'),
+    ]
+    LEVEL_CHOICES = [
+        ('Error', 'Error'),
+        ('Warning', 'Warning'),
+    ]
+
+    source_type = models.CharField(max_length=50, choices=SOURCE_TYPE_CHOICES)
+    container_id = models.CharField(max_length=255)
+    container_name = models.CharField(max_length=255)  # отображаемое имя контейнера
+    timestamp = models.DateTimeField()
+    error_message = models.TextField()
+    short_message = models.CharField(max_length=1024, blank=True, null=True)
+    level = models.CharField(max_length=50, choices=LEVEL_CHOICES, default='Error')
+    service_name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Ошибка контейнера'
+        verbose_name_plural = 'Ошибки контейнеров'
+        ordering = ['-timestamp', '-created_at']
+        indexes = [
+            models.Index(fields=['source_type', 'container_id']),
+            models.Index(fields=['container_name']),
+            models.Index(fields=['level']),
+            models.Index(fields=['-timestamp']),
+        ]
+
+    def __str__(self):
+        return f'{self.container_name} ({self.container_id}) — {self.level} @ {self.timestamp}'

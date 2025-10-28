@@ -110,7 +110,7 @@ function Dashboard() {
     //         <div className="empty-state">
     //             <h2>Кластеры не найдены</h2>
     //             <p>Добавьте кластер через админ-панель Django</p>
-    //             <a href="http://backend:8000/admin" target="_blank" rel="noopener noreferrer">
+    //             <a href="http://localhost:8000/admin" target="_blank" rel="noopener noreferrer">
     //                 Открыть админ-панель
     //             </a>
     //         </div>

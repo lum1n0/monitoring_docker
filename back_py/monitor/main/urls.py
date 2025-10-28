@@ -5,10 +5,14 @@ from .views import (
     KubernetesClusterViewSet, NamespaceViewSet, PodViewSet,
     ContainerViewSet, EventViewSet, SyncKubernetesDataView, ClusterHealthView,
     DockerHostViewSet, DockerContainerViewSet, SyncDockerDataView, DockerHostHealthView,
-    UnifiedContainersView, UnifiedStatsView
+    UnifiedContainersView, UnifiedStatsView, ContainerErrorViewSet
 )
 
 router = DefaultRouter()
+#error
+router.register(r'container-errors', ContainerErrorViewSet, basename='containererror')
+
+
 # Kubernetes routes
 router.register(r'clusters', KubernetesClusterViewSet, basename='cluster')
 router.register(r'namespaces', NamespaceViewSet, basename='namespace')

@@ -1,10 +1,13 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import timedelta
+from rest_framework.permissions import IsAuthenticated
+from .models import ContainerError
+from .serializers import ContainerErrorSerializer
 
 from .models import KubernetesCluster, Namespace, Pod, Container, ContainerMetric, Event
 from .serializers import (
@@ -17,6 +20,36 @@ from .services.kubernetes_service import KubernetesService
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+
+class ContainerErrorViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API для просмотра ошибок контейнеров с фильтрацией по контейнеру, типу, времени и уровню.
+    """
+    queryset = ContainerError.objects.all()
+    serializer_class = ContainerErrorSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['container_name', 'container_id', 'source', 'short_description']
+    ordering_fields = ['timestamp', 'container_name', 'level']
+    permission_classes = [IsAuthenticated]  # При необходимости
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        container_type = self.request.query_params.get('container_type')
+        container_id = self.request.query_params.get('container_id')
+        level = self.request.query_params.get('level')
+        source = self.request.query_params.get('source')
+        if container_type:
+            queryset = queryset.filter(container_type=container_type)
+        if container_id:
+            queryset = queryset.filter(container_id=container_id)
+        if level:
+            queryset = queryset.filter(level=level)
+        if source:
+            queryset = queryset.filter(source__icontains=source)
+        return queryset
+
 
 
 class KubernetesClusterViewSet(viewsets.ModelViewSet):
